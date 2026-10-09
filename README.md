@@ -20,9 +20,94 @@ From today, that someone is you.
 
 Only what we already did in class. Nothing new. Nothing sneaky.
 
-That means bash basics with if, grep, sed, and arrays. That is plenty. If you have not been taught it, you do not need it for this job.
+That means grep, sed and arrays.
 
 We read files. We do not delete files. We do not fix the whole school network. We look, we note, we hand over. If you are not sure, ask. Good admins ask. Bad admins type fast.
+
+## The datasets we have - how to use them
+
+All practice files live in `datasets/`. Read them. Copy them. Never edit the originals.
+
+We have exactly three datasets:
+
+- `datasets/school-logins.log` - for Job 1, the log searchers. 30 lines, one event per line: `date time source: message`. Mixed case (`Failed`, `FAILED`, `failed`, `error`, `ERROR`). Lots of noise lines about printers/wifi/records.
+- `datasets/office-records.txt` - for Job 2, the records cleaners. 20 lines, one exported office line per line. Contains old word `thy`/`Thy` in mixed case, overused `the`, and open IDs / 4-digit blocks like `1234` and `1001 2002 3003 4004`.
+- `datasets/computer-room-list.txt` - for Job 3, the stock checkers. 20 lines, one PC name per line (e.g. `Room1-PC01`). Mixed case on purpose (`Library-PC01` vs `library-pc02`). No blank lines.
+
+Look first:
+
+```bash
+ls -l datasets/
+wc -l datasets/*
+head -n 5 datasets/school-logins.log
+cat datasets/school-logins.log
+cat datasets/office-records.txt
+cat datasets/computer-room-list.txt
+```
+
+Safe pattern before you start any job - work on a copy in `/tmp`, never on the original:
+
+```bash
+cp datasets/school-logins.log /tmp/my-copy.txt
+# do all your grep / sed / array work on /tmp/my-copy.txt
+rm /tmp/my-copy.txt  # tidy up when done
+```
+
+### How to use school-logins.log (grep only)
+
+```bash
+grep -w 'Failed' datasets/school-logins.log
+grep -i 'error' datasets/school-logins.log
+grep -c -w 'Failed' datasets/school-logins.log
+grep -v -i 'login' datasets/school-logins.log
+```
+
+`-w` matches whole words only. `-i` ignores case. `-v` hides lines you do not want. `-c` counts instead of printing. Write down the exact command + count. Copy-paste is fine. Do not use `sed` or edit the log.
+
+### How to use office-records.txt (sed only, grep to check)
+
+```bash
+grep -w 'the' datasets/office-records.txt
+grep -i 'thy' datasets/office-records.txt
+cp datasets/office-records.txt /tmp/records-copy.txt
+
+# change "the " to "this " once per line (note the space)
+sed 's/the /this /' /tmp/records-copy.txt | head -n 5
+
+# change old "thy" to "your" everywhere, any case
+sed 's/thy/your/gI' /tmp/records-copy.txt | head -n 5
+
+# wrap "thy" so a teacher can spot it (& = what you matched)
+sed 's/thy/{&}/gI' /tmp/records-copy.txt | head -n 5
+
+# mask any 4-digit block with stars (IDs, locker codes, receipts)
+sed -E 's/[0-9]{4}/****/g' /tmp/records-copy.txt | head -n 5
+```
+
+Prove it with before/after on 5 lines. Do not overwrite `datasets/office-records.txt` and never use `sed -i` on the original.
+
+### How to use computer-room-list.txt (bash if + arrays)
+
+```bash
+mapfile -t pcs < datasets/computer-room-list.txt
+
+echo "Count is ${#pcs[@]}"   # how many loaded
+echo "Item four is ${pcs[3]}" # arrays start at 0
+
+# filter out names with a certain letter (example: a)
+for p in "${pcs[@]}"; do
+  echo "$p"
+done | grep -v -i 'a'
+
+# flag YES / NO with if
+if [ "${#pcs[@]}" -gt 25 ]; then
+  echo "YES, room is full"
+else
+  echo "NO, room is not full"
+fi
+```
+
+`mapfile -t` loads one line per array item. `${#pcs[@]}` is the count. `${pcs[3]}` is item four. Do not edit the list file.
 
 ## The three jobs
 
